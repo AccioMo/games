@@ -136,7 +136,7 @@ def checkinWho(zing, zist):
             return True
 
     elif zist.index(zing) == 3:
-        if destX == originX + hop or destX == originX - hop or destY == originY + hop or destY == originY - hop:
+        if (destX == originX or destX == originX + hop or destX == originX - hop) and (destY == originY or destY == originY + hop or destY == originY - hop):
             pass
         else:
             print("that's not how the king moves")
@@ -173,7 +173,7 @@ def checkinWho(zing, zist):
             pass
         elif originY == 82 and destY == originY + hop*2 and destX == originX:
             pass
-        elif destY == originY + hop and destX == originX + hop and checkinKilled(p_rectA):
+        elif destY == originY + hop and (destX == originX - hop or destX == originX + hop) and checkinKilled(p_rectA):
             pass
         else:
             print("that's not how pawns move")
@@ -208,7 +208,6 @@ class PiecesA:
                         if checkinKilled(p_rectB): 
                             p_rectB[i] = None
                             piecesB[i] = None
-                        print("what")
                         Selected_A.x = destX
                         Selected_A.y = destY
                         return True
