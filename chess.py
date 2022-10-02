@@ -19,8 +19,8 @@ xies = [7, 82, 157, 232, 307, 382, 457, 532]
 
 hop = 75
 
-White_touched = False
-Black_touched = False
+piece_touched = False
+WhiteTurn = True
 
 chess_surf = pygame.image.load('graphics/chess.png').convert_alpha()
 kingW = pygame.image.load('graphics/kingW.png').convert_alpha()
@@ -60,6 +60,7 @@ for rectB in piecesB:
         x1 = 7
         y1 += hop
 
+# Return to original position:
 def fuckoff(shit):
     shit.x = originX
     shit.y = originY
@@ -99,6 +100,8 @@ def checkinKilled(zist):
             return True
         else:
             pass
+
+# How the knights move:
 def horsies(nox, noy):
     ss = [1, -1]
     for s in ss:
@@ -106,8 +109,32 @@ def horsies(nox, noy):
             if destX == originX + hop*nox*s*sss and destY == originY + hop*noy*s:
                 return True
 
-def checkinWho(zing, zist):
+# Makes next section more readable:
+def is_rook(zing, zist):
     if zist.index(zing) == 0 or zist.index(zing) == 7:
+        return True
+def is_knight(zing, zist):
+    if zist.index(zing) == 1 or zist.index(zing) == 6:
+        return True
+def is_bishop(zing, zist):
+    if zist.index(zing) == 2 or zist.index(zing) == 5:
+        return True
+def is_king(zing, zist):
+    if zist.index(zing) == 3:
+        return True
+def is_queen(zing, zist):
+    if zist.index(zing) == 4:
+        return True
+def is_white_pawn(zing, zist):
+    if zist == p_rectA and 8 <= zist.index(zing) <= 15:
+        return True
+def is_black_pawn(zing, zist):
+    if zist == p_rectB and 8 <= zist.index(zing) <= 15:
+        return True
+
+# What piece was moved and where can it go:
+def checkinWho(zing, zist):
+    if is_rook(zing, zist):
         if originX == destX or originY == destY:
             pass
         else:
@@ -115,7 +142,7 @@ def checkinWho(zing, zist):
             zing.x = originX
             zing.y = originY
             return True
-    elif zist.index(zing) == 1 or zist.index(zing) == 6:
+    elif is_knight(zing, zist):
         if horsies(2, 1) or horsies(1, 2):
             pass
         else:
@@ -124,7 +151,7 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
 
-    elif zist.index(zing) == 2 or zist.index(zing) == 5:
+    elif is_bishop(zing, zist):
         biV = pygame.math.Vector2(abs(destX - originX), abs(destY - originY))
         biV0 = pygame.math.Vector2(hop, hop)
         if biV.normalize() == biV0.normalize():
@@ -135,7 +162,7 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
 
-    elif zist.index(zing) == 3:
+    elif is_king(zing, zist):
         if (destX == originX or destX == originX + hop or destX == originX - hop) and (destY == originY or destY == originY + hop or destY == originY - hop):
             pass
         else:
@@ -144,7 +171,7 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
 
-    elif zist.index(zing) == 4:
+    elif is_queen(zing, zist):
         biV = pygame.math.Vector2(abs(destX - originX), abs(destY - originY))
         biV0 = pygame.math.Vector2(hop, hop)
         if biV.normalize() == biV0.normalize() or originX == destX or originY == destY:
@@ -155,7 +182,7 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
 
-    elif zist == p_rectA and 8 <= zist.index(zing) <= 15:
+    elif is_white_pawn(zing, zist):
         if destY == originY - hop and destX == originX:
             pass
         elif originY == 457 and destY == originY - hop*2 and destX == originX:
@@ -168,7 +195,7 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
         
-    elif zist == p_rectB and 8 <= zist.index(zing) <= 15:
+    elif is_black_pawn(zing, zist):
         if destY == originY + hop and destX == originX:
             pass
         elif originY == 82 and destY == originY + hop*2 and destX == originX:
@@ -181,74 +208,36 @@ def checkinWho(zing, zist):
             zing.y = originY
             return True
 
-class PiecesA:
-    def loc(self):
-        for pA, p_A in itertools.zip_longest(piecesA, p_rectA):
+class Pieces:
+    def setting_board(rect_pieces, img_pieces):
+        for pA, p_A in itertools.zip_longest(img_pieces, rect_pieces):
             if pA:
                 screen.blit(pA, p_A)
-    def move(self):
-        for sltd_A in p_rectA:
-            global White_touched
-            if sltd_A and event.type == pygame.MOUSEBUTTONDOWN and sltd_A.collidepoint(pygame.mouse.get_pos()) and White_touched is False:
-                global Selected_A
+    def moving(rect_pieces, enemy_pieces_rect, enemy_pieces_img):
+        for sltd in rect_pieces:
+            global piece_touched
+            if sltd and event.type == pygame.MOUSEBUTTONDOWN and sltd.collidepoint(pygame.mouse.get_pos()) and piece_touched is False:
+                global Selected
                 global originX
                 global originY
-                Selected_A = sltd_A
-                originX = Selected_A.x
-                originY = Selected_A.y
-                White_touched = True
-            if White_touched:
-                Selected_A.center = pygame.mouse.get_pos()
+                Selected = sltd
+                originX = Selected.x
+                originY = Selected.y
+                piece_touched = True
+            if piece_touched:
+                Selected.center = pygame.mouse.get_pos()
                 if event.type == pygame.MOUSEBUTTONUP:
-                    checkinXY(Selected_A)
-                    if checkinCollide(Selected_A, p_rectA) or checkinWho(Selected_A, p_rectA):
-                        White_touched = False
+                    checkinXY(Selected)
+                    if checkinCollide(Selected, rect_pieces) or checkinWho(Selected, rect_pieces):
+                        piece_touched = False
                         return False
                     else:
-                        if checkinKilled(p_rectB): 
-                            p_rectB[i] = None
-                            piecesB[i] = None
-                        Selected_A.x = destX
-                        Selected_A.y = destY
+                        if checkinKilled(enemy_pieces_rect):
+                            enemy_pieces_rect[i] = None
+                            enemy_pieces_img[i] = None
+                        Selected.x = destX
+                        Selected.y = destY
                         return True
-    # def clean_up():
-    #     for pA in p_rectA:
-    #         if p_rectA.index(pA) == 0 or p_rectA.index(pA) == 7:
-    #             pA.x
-                
-
-class PiecesB:
-    def loc(self):
-        for pB, p_B in itertools.zip_longest(piecesB, p_rectB):
-            if pB:
-                screen.blit(pB, p_B)
-    def move(self):
-        for sltd_B in p_rectB:
-            global Black_touched
-            if sltd_B and event.type == pygame.MOUSEBUTTONDOWN and sltd_B.collidepoint(pygame.mouse.get_pos()) and Black_touched is False:
-                global Selected_B
-                global originX
-                global originY
-                Selected_B = sltd_B
-                originX = Selected_B.x
-                originY = Selected_B.y
-                Black_touched = True
-            if Black_touched:
-                Selected_B.center = pygame.mouse.get_pos()
-                if event.type == pygame.MOUSEBUTTONUP:
-                    checkinXY(Selected_B)
-                    if checkinCollide(Selected_B, p_rectB) or checkinWho(Selected_B, p_rectB):
-                        Black_touched = False
-                        return False
-                    else:
-                        if checkinKilled(p_rectA): 
-                            p_rectA[i] = None
-                            piecesA[i] = None
-                        Selected_B.x = destX
-                        Selected_B.y = destY
-                        return True
-
-WhiteTurn = True
 
 while True:
     for event in pygame.event.get():
@@ -258,20 +247,20 @@ while True:
 
     screen.blit(chess_surf, (0, 0))
 
-    PiecesA.loc(x1)
-    PiecesB.loc(x1)
+    Pieces.setting_board(p_rectA, piecesA)
+    Pieces.setting_board(p_rectB, piecesB)
 
     if WhiteTurn:
-        if PiecesA.move(x1) is True:
+        if Pieces.moving(p_rectA, p_rectB, piecesB) is True:
             WhiteTurn = False
-            White_touched = False
-            print("black")
+            piece_touched = False
+            print("Black's Turn")
 
     else:
-        if PiecesB.move(x1) is True:
+        if Pieces.moving(p_rectB, p_rectA, piecesA) is True:
             WhiteTurn = True
-            Black_touched = False
-            print("white")
+            piece_touched = False
+            print("White's Turn")
 
     pygame.display.update()
     clock.tick(60)
