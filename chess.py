@@ -2,6 +2,7 @@ from cmath import pi
 from shutil import move
 from threading import local
 from tkinter import W, Y
+from unicodedata import name
 from urllib.parse import parse_qsl
 from xml.sax import parseString
 import pygame
@@ -11,13 +12,23 @@ import math
 
 pygame.init()
 
-screen = pygame.display.set_mode((600, 600))
+BOARD = 600
+PIECE_SIZE = 60
+SQUARE = 75
+A1 = 7
+A2 = A1+SQUARE
+A3 = A2+SQUARE
+A4 = A3+SQUARE
+A5 = A4+SQUARE
+A6 = A5+SQUARE
+A7 = A6+SQUARE
+A8 = A7+SQUARE
+
+screen = pygame.display.set_mode((BOARD, BOARD))
 clock = pygame.time.Clock()
 
-yies = [7, 82, 157, 232, 307, 382, 457, 532]
-xies = [7, 82, 157, 232, 307, 382, 457, 532]
-
-hop = 75
+yies = [A1, A2, A3, A4, A5, A6, A7, A8]
+xies = yies
 
 piece_touched = False
 WhiteTurn = True
@@ -42,46 +53,58 @@ piecesB = [rookB, knightB, bishopB, kingB, queenB, bishopB, knightB, rookB, pawn
 p_rectA = []
 p_rectB = []
 
-x1 = 7
-y1 = 532
+x1 = A1
+y1 = A8
 for rectA in piecesA:
     p_rectA.append(rectA.get_rect(topleft=(x1, y1)))
-    x1 += hop
-    if x1 == 607:
-        x1 = 7
-        y1 -= hop
+    x1 += SQUARE
+    if x1 == BOARD + A1:
+        x1 = A1
+        y1 -= SQUARE
 
-x1 = 7
-y1 = 7
+x1 = A1
+y1 = A1
 for rectB in piecesB:
     p_rectB.append(rectB.get_rect(topleft=(x1, y1)))
-    x1 += hop
-    if x1 == 607:
-        x1 = 7
-        y1 += hop
+    x1 += SQUARE
+    if x1 == BOARD + A1:
+        x1 = A1
+        y1 += SQUARE
 
+allpieces = p_rectA + p_rectB
+# AllPieces = ["White Rook", "White Knight", "White Bishop", "White King", "White Queen", "White Bishop", "White Knight", "White Rook", "White Pawn", "White Pawn", "White Pawn", "White Pawn", "White Pawn", "White Pawn", "White Pawn", "White Pawn", "Black Rook", "Black Knight", "Black Bishop", "Black King", "Black Queen", "Black Bishop", "Black Knight", "Black Rook", "Black Pawn", "Black Pawn", "Black Pawn", "Black Pawn", "Black Pawn", "Black Pawn", "Black Pawn", "Black Pawn"]
 # Return to original position:
-def fuckoff(shit):
-    shit.x = originX
-    shit.y = originY
-    return True
+# def fuckoff(shit):
+#     shit.x = originX
+#     shit.y = originY
+#     return True
 
-# Positioning piece in center of square:
+# Positioning piece in center of SQUARE:
+
+def setting_board(rect_pieces, img_pieces):
+    for pA, p_A in itertools.zip_longest(img_pieces, rect_pieces):
+        if pA:
+            screen.blit(pA, p_A)
+
 def checkinXY(zing):
-    dx = 600
-    dy = 600
+    dx = BOARD
+    dy = BOARD
     for x in xies:
         if abs(zing.x - x) <= abs(dx):
             dx = zing.x - x
     global destX
+    global distanceX
     destX = zing.x - dx
+    distanceX = destX - originX
     for y in yies:
         if abs(zing.y - y) <= abs(dy):
             dy = zing.y - y
     global destY
+    global distanceY
     destY = zing.y - dy
+    distanceY = destY - originY
 
-# Checking for pieces on square:
+# Checking for pieces on SQUARE:
 def checkinCollide(zing, zist):
     for piece in zist:
         if piece and (piece.x == destX and piece.y == destY) or (destX == originX and destY == originY):
@@ -101,12 +124,33 @@ def checkinKilled(zist):
         else:
             pass
 
+def checkinWay(zing):
+    if distanceX:
+        xway = int(distanceX / abs(distanceX))
+    else:
+        xway = 1
+    if distanceY:
+        yway = int(distanceY / abs(distanceY))
+    else:
+        yway = 1
+    for pointX, pointY in itertools.zip_longest(range(originX, destX, SQUARE*xway), range(originY, destY, SQUARE*yway)):
+        global piece
+        if not pointX:
+            pointX = originX
+        if not pointY:
+            pointY = originY
+        for piece in allpieces:
+            if piece and allpieces.index(zing) is not allpieces.index(piece) and (piece.x == pointX and piece.y == pointY):
+                return True
+            else:
+                pass
+
 # How the knights move:
 def horsies(nox, noy):
     ss = [1, -1]
     for s in ss:
         for sss in ss:
-            if destX == originX + hop*nox*s*sss and destY == originY + hop*noy*s:
+            if destX == originX + SQUARE*nox*s*sss and destY == originY + SQUARE*noy*s:
                 return True
 
 # Makes next section more readable:
@@ -134,14 +178,16 @@ def is_black_pawn(zing, zist):
 
 # What piece was moved and where can it go:
 def checkinWho(zing, zist):
+    
     if is_rook(zing, zist):
-        if originX == destX or originY == destY:
+        if (originX == destX or originY == destY) and not checkinWay(zing):
             pass
         else:
             print("that's not how rooks move")
             zing.x = originX
             zing.y = originY
             return True
+
     elif is_knight(zing, zist):
         if horsies(2, 1) or horsies(1, 2):
             pass
@@ -152,9 +198,9 @@ def checkinWho(zing, zist):
             return True
 
     elif is_bishop(zing, zist):
-        biV = pygame.math.Vector2(abs(destX - originX), abs(destY - originY))
-        biV0 = pygame.math.Vector2(hop, hop)
-        if biV.normalize() == biV0.normalize():
+        biV = pygame.math.Vector2(abs(distanceX), abs(distanceY))
+        biV0 = pygame.math.Vector2(SQUARE, SQUARE)
+        if biV.normalize() == biV0.normalize() and not checkinWay(zing):
             pass
         else:
             print("that's not how bishops move")
@@ -163,7 +209,7 @@ def checkinWho(zing, zist):
             return True
 
     elif is_king(zing, zist):
-        if (destX == originX or destX == originX + hop or destX == originX - hop) and (destY == originY or destY == originY + hop or destY == originY - hop):
+        if (destX == originX or destX == originX + SQUARE or destX == originX - SQUARE) and (destY == originY or destY == originY +SQUARE or destY == originY -SQUARE):
             pass
         else:
             print("that's not how the king moves")
@@ -173,8 +219,8 @@ def checkinWho(zing, zist):
 
     elif is_queen(zing, zist):
         biV = pygame.math.Vector2(abs(destX - originX), abs(destY - originY))
-        biV0 = pygame.math.Vector2(hop, hop)
-        if biV.normalize() == biV0.normalize() or originX == destX or originY == destY:
+        biV0 = pygame.math.Vector2(SQUARE, SQUARE)
+        if (biV.normalize() == biV0.normalize() or originX == destX or originY == destY) and not checkinWay(zing):
             pass
         else:
             print("that's not how the queen moves")
@@ -183,11 +229,11 @@ def checkinWho(zing, zist):
             return True
 
     elif is_white_pawn(zing, zist):
-        if destY == originY - hop and destX == originX:
+        if destY == originY - SQUARE and destX == originX and not checkinKilled(p_rectB):
             pass
-        elif originY == 457 and destY == originY - hop*2 and destX == originX:
+        elif originY == A7 and destY == originY - SQUARE*2 and destX == originX and not checkinWay(zing) and not checkinKilled(p_rectB):
             pass
-        elif destY == originY - hop and (destX == originX - hop or destX == originX + hop) and checkinKilled(p_rectB):
+        elif destY == originY - SQUARE and (destX == originX -SQUARE or destX == originX +SQUARE) and checkinKilled(p_rectB):
             pass
         else:
             print("that's not how pawns move")
@@ -196,11 +242,11 @@ def checkinWho(zing, zist):
             return True
         
     elif is_black_pawn(zing, zist):
-        if destY == originY + hop and destX == originX:
+        if destY == originY + SQUARE and destX == originX and not checkinKilled(p_rectA):
             pass
-        elif originY == 82 and destY == originY + hop*2 and destX == originX:
+        elif originY == A2 and destY == originY + SQUARE*2 and destX == originX and not checkinWay(zing) and not checkinKilled(p_rectA):
             pass
-        elif destY == originY + hop and (destX == originX - hop or destX == originX + hop) and checkinKilled(p_rectA):
+        elif destY == originY + SQUARE and (destX == originX - SQUARE or destX == originX + SQUARE) and checkinKilled(p_rectA):
             pass
         else:
             print("that's not how pawns move")
@@ -209,10 +255,8 @@ def checkinWho(zing, zist):
             return True
 
 class Pieces:
-    def setting_board(rect_pieces, img_pieces):
-        for pA, p_A in itertools.zip_longest(img_pieces, rect_pieces):
-            if pA:
-                screen.blit(pA, p_A)
+    # def __init__(self):
+    #     self.name = AllPieces[allpieces.index(piece)]
     def moving(rect_pieces, enemy_pieces_rect, enemy_pieces_img):
         for sltd in rect_pieces:
             global piece_touched
@@ -247,17 +291,17 @@ while True:
 
     screen.blit(chess_surf, (0, 0))
 
-    Pieces.setting_board(p_rectA, piecesA)
-    Pieces.setting_board(p_rectB, piecesB)
+    setting_board(p_rectA, piecesA)
+    setting_board(p_rectB, piecesB)
 
     if WhiteTurn:
-        if Pieces.moving(p_rectA, p_rectB, piecesB) is True:
+        if Pieces.moving(p_rectA, p_rectB, piecesB):
             WhiteTurn = False
             piece_touched = False
             print("Black's Turn")
 
     else:
-        if Pieces.moving(p_rectB, p_rectA, piecesA) is True:
+        if Pieces.moving(p_rectB, p_rectA, piecesA):
             WhiteTurn = True
             piece_touched = False
             print("White's Turn")
