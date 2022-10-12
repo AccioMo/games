@@ -5,6 +5,7 @@ from tkinter import W, Y
 from unicodedata import name
 from urllib.parse import parse_qsl
 from xml.sax import parseString
+from xml.sax.saxutils import XMLFilterBase
 import pygame
 from sys import exit
 import itertools
@@ -52,6 +53,8 @@ piecesB = [rookB, knightB, bishopB, kingB, queenB, bishopB, knightB, rookB, pawn
 
 p_rectA = []
 p_rectB = []
+
+moves = []
 
 x1 = A1
 y1 = A8
@@ -145,13 +148,50 @@ def checkinWay(zing):
             else:
                 pass
 
+# How the rooks move:
+def rookMoves():
+    for pos in xies:
+        mVx, mVy = [originX, pos], [originY, pos]
+        if all(0 <= it <= BOARD for it in mVx and mVy):
+            moves.append(mVx)
+            moves.append(mVy)
+    for move in moves:
+        if move == PositionZ:
+            return True
+        else:
+            pass
+
 # How the knights move:
-def horsies(nox, noy):
+def knightMoves():
     ss = [1, -1]
     for s in ss:
         for sss in ss:
-            if destX == originX + SQUARE*nox*s*sss and destY == originY + SQUARE*noy*s:
-                return True
+            mV = pygame.math.Vector2((originX + SQUARE*s*sss), (originY + SQUARE*2*s))
+            if all(0 <= it <= BOARD for it in mV):
+                moves.append(mV)
+    for s in ss:
+        for sss in ss:
+            mV = pygame.math.Vector2((originX + SQUARE*2*s*sss), (originY + SQUARE*s))
+            if all(0 <= it <= 600 for it in mV):
+                moves.append(mV)
+    for move in moves:
+        if move == PositionZ:
+            return True
+        else:
+            pass
+
+# How the bishops move:
+def bishopMoves():
+    for pos in xies:
+        pygame.math.Vector2(originX, originY)
+        if all(0 <= it <= 600 for it in mVx and mVy):
+            moves.append(mVx)
+            moves.append(mVy)
+    for move in moves:
+        if move == PositionZ:
+            return True
+        else:
+            pass
 
 # Makes next section more readable:
 def is_rook(zing, zist):
@@ -180,7 +220,7 @@ def is_black_pawn(zing, zist):
 def checkinWho(zing, zist):
     
     if is_rook(zing, zist):
-        if (originX == destX or originY == destY) and not checkinWay(zing):
+        if rookMoves() and not checkinWay(zing):
             pass
         else:
             print("that's not how rooks move")
@@ -189,7 +229,7 @@ def checkinWho(zing, zist):
             return True
 
     elif is_knight(zing, zist):
-        if horsies(2, 1) or horsies(1, 2):
+        if knightMoves():
             pass
         else:
             print("that's not how knights move")
@@ -231,7 +271,7 @@ def checkinWho(zing, zist):
     elif is_white_pawn(zing, zist):
         if destY == originY - SQUARE and destX == originX and not checkinKilled(p_rectB):
             pass
-        elif originY == A7 and destY == originY - SQUARE*2 and destX == originX and not checkinWay(zing) and not checkinKilled(p_rectB):
+        elif originY == A7 and destY == originY - SQUARE*2 and destX == originX and not(checkinWay(zing) or checkinKilled(p_rectB) or checkinWay(zing)):
             pass
         elif destY == originY - SQUARE and (destX == originX -SQUARE or destX == originX +SQUARE) and checkinKilled(p_rectB):
             pass
@@ -244,7 +284,7 @@ def checkinWho(zing, zist):
     elif is_black_pawn(zing, zist):
         if destY == originY + SQUARE and destX == originX and not checkinKilled(p_rectA):
             pass
-        elif originY == A2 and destY == originY + SQUARE*2 and destX == originX and not checkinWay(zing) and not checkinKilled(p_rectA):
+        elif originY == A2 and destY == originY + SQUARE*2 and destX == originX and not(checkinWay(zing) or checkinKilled(p_rectA) or checkinWay(zing)):
             pass
         elif destY == originY + SQUARE and (destX == originX - SQUARE or destX == originX + SQUARE) and checkinKilled(p_rectA):
             pass
@@ -264,14 +304,18 @@ class Pieces:
                 global Selected
                 global originX
                 global originY
+                global PositionA
                 Selected = sltd
                 originX = Selected.x
                 originY = Selected.y
+                PositionA = Selected.center
                 piece_touched = True
             if piece_touched:
                 Selected.center = pygame.mouse.get_pos()
                 if event.type == pygame.MOUSEBUTTONUP:
                     checkinXY(Selected)
+                    global PositionZ
+                    PositionZ = [destX, destY]
                     if checkinCollide(Selected, rect_pieces) or checkinWho(Selected, rect_pieces):
                         piece_touched = False
                         return False
