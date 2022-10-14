@@ -88,13 +88,12 @@ allpieces = p_rectA + p_rectB
 #     shit.y = originY
 #     return True
 
-# Positioning piece in center of SQUARE:
-
 def setting_board(rect_pieces, img_pieces):
     for pA, p_A in itertools.zip_longest(img_pieces, rect_pieces):
         if pA:
             screen.blit(pA, p_A)
 
+# Positioning piece in center of square:
 def checkinXY(zing):
     dx = BOARD
     dy = BOARD
@@ -127,7 +126,7 @@ def checkinEnemy(zist):
         else:
             pass
 
-# Gobbling:
+# Execute order (66):
 def checkinKilled(zist, zist_img):
     Selected.topleft = PositionZ
     for foe in zist:
@@ -136,9 +135,61 @@ def checkinKilled(zist, zist_img):
             zist[i] = None
             zist_img[i] = None
 
+# Show available moves:
 def showMoves():
     for move in moves:
         pygame.draw.circle(screen, (100,100,100), (move[0]+30, move[1]+30), 10)
+
+def blackkingSafety():
+    for piece in p_rectA:
+        global originX
+        global originY
+        originX = piece.x
+        originY = piece.y
+        rookMoves(p_rectA, p_rectB)
+        knightMoves(p_rectA)
+        bishopMoves(p_rectA, p_rectB)
+        queenMoves(p_rectA, p_rectB)
+        whitepawnMoves()
+        showMoves()
+        print("white moves")
+        if any(list(move) == list(p_rectB[3].topleft) for move in moves):
+            print("Black king in check")
+            moves.clear()
+            originX = Selected.x
+            originY = Selected.y
+            return True
+        else:
+            moves.clear()
+            originX = Selected.x
+            originY = Selected.y
+            return False
+
+def whitekingSafety():
+    for piece in p_rectB:
+        global originX
+        global originY
+        originX = piece.x
+        originY = piece.y
+        rookMoves(p_rectB, p_rectA)
+        knightMoves(p_rectB)
+        bishopMoves(p_rectB, p_rectA)
+        queenMoves(p_rectB, p_rectA)
+        blackpawnMoves()
+        showMoves()
+        print("white moves")
+        print(moves)
+        if any(list(move) == list(p_rectA[3].topleft) for move in moves):
+            print("White king in check")
+            moves.clear()
+            originX = Selected.x
+            originY = Selected.y
+            return True
+        else:
+            moves.clear()
+            originX = Selected.x
+            originY = Selected.y
+            return False
 
 # How the rooks move:
 def rookMoves(zist, enemy_zist):
@@ -172,6 +223,7 @@ def knightMoves(zist):
             if all(0 <= it <= 600 for it in mV)and not any(piece and piece.topleft == mV for piece in zist):
                 moves.append(mV)
     bad_way.clear()
+
 # How the bishops move:
 def bishopMoves(zist, enemy_zist):
     for pos in range(75, 600, 75):
@@ -204,8 +256,8 @@ def kingMoves(zist):
 
 # How the queen moves:
 def queenMoves(zist, enemy_zist):
-    if bishopMoves(zist, enemy_zist) or rookMoves(zist, enemy_zist):
-        return True
+    bishopMoves(zist, enemy_zist)
+    rookMoves(zist, enemy_zist)
 
 # How the pawns move:
 def whitepawnMoves():
@@ -222,7 +274,6 @@ def whitepawnMoves():
             if any(piece and list(piece.topleft) == mV for piece in p_rectB):
                 moves.append(mV)
     bad_way.clear()
-
 def blackpawnMoves():
     global mV
     if is_black_pawn:
@@ -288,7 +339,7 @@ def checkinWho(zing, zist, enemy_zist):
 class Pieces:
     # def __init__(self):
     #     self.unmoved = bool
-    def moving(rect_pieces, enemy_pieces_rect):
+    def moving(rect_pieces, enemy_pieces_rect, enemy_pieces_img):
         for sltd in rect_pieces:
             global piece_touched
             if sltd and event.type == pygame.MOUSEBUTTONDOWN and sltd.collidepoint(pygame.mouse.get_pos()) and piece_touched is False:
@@ -311,6 +362,7 @@ class Pieces:
                     checkinWho(Selected, rect_pieces, enemy_pieces_rect)
                     for move in moves:
                         if move == PositionZ and not PositionA == PositionZ:
+                            checkinKilled(enemy_pieces_rect, enemy_pieces_img)
                             return True
                         else:
                             piece_touched = False
@@ -332,20 +384,20 @@ while True:
             showMoves()
             if event.type == pygame.MOUSEBUTTONUP:
                 piece_touched = True
-        if Pieces.moving(p_rectA, p_rectB):
-            checkinKilled(p_rectB, piecesB)
-            WhiteTurn = False
-            piece_touched = False
-            moves.clear()
-            print("Black's Turn")
+        if Pieces.moving(p_rectA, p_rectB, piecesB):
+            if whitekingSafety() is False:
+                checkinKilled(p_rectB, piecesB)
+                WhiteTurn = False
+                piece_touched = False
+                moves.clear()
+                print("Black's Turn")
 
     else:
         if moves:
             showMoves()
             if event.type == pygame.MOUSEBUTTONUP:
                 piece_touched = True
-        if Pieces.moving(p_rectB, p_rectA):
-            checkinKilled(p_rectA, piecesA)
+        if Pieces.moving(p_rectB, p_rectA, piecesA) and blackkingSafety() is False:
             WhiteTurn = True
             piece_touched = False
             moves.clear()
