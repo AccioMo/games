@@ -2,6 +2,7 @@ from cmath import pi
 from shutil import move
 from threading import local
 from tkinter import W, Y
+from traceback import format_exc
 from unicodedata import name
 from urllib.parse import parse_qsl
 from xml.sax import parseString
@@ -48,6 +49,9 @@ rookW = pygame.image.load('graphics/rookW.png').convert_alpha()
 rookB = pygame.image.load('graphics/rookB.png').convert_alpha()
 pawnW = pygame.image.load('graphics/pawnW.png').convert_alpha()
 pawnB = pygame.image.load('graphics/pawnB.png').convert_alpha()
+
+# dot = pygame.image.load('dot.png').convert_alpha()
+# dot_rect = dot.get_rect(topleft)
 
 piecesA = [rookW, knightW, bishopW, kingW, queenW, bishopW, knightW, rookW, pawnW, pawnW, pawnW, pawnW, pawnW, pawnW, pawnW, pawnW]
 piecesB = [rookB, knightB, bishopB, kingB, queenB, bishopB, knightB, rookB, pawnB, pawnB, pawnB, pawnB, pawnB, pawnB, pawnB, pawnB]
@@ -98,21 +102,17 @@ def checkinXY(zing):
         if abs(zing.x - x) <= abs(dx):
             dx = zing.x - x
     global destX
-    global distanceX
     destX = zing.x - dx
-    distanceX = destX - originX
     for y in yies:
         if abs(zing.y - y) <= abs(dy):
             dy = zing.y - y
     global destY
-    global distanceY
     destY = zing.y - dy
-    distanceY = destY - originY
 
 # Checking for pieces on SQUARE:
 def checkinCollide(zist):
     for piece in zist:
-        if piece and (list(piece.topleft) == mV or any(it == way for it in bad_way)):
+        if piece and list(piece.topleft) == mV or any(it == way for it in bad_way):
             bad_way.append(way)
             return True
         else:
@@ -121,65 +121,60 @@ def checkinCollide(zist):
 # Gobbling:
 def checkinEnemy(zist):
     for piece in zist:
-        if piece and not any(it == way for it in bad_way) and piece.topleft == mV:
+        if piece and not any(it == way for it in bad_way) and list(piece.topleft) == mV:
             bad_way.append(way)
             return True
         else:
             pass
 
 # Gobbling:
-def checkinKilled(zist):
-    for piece in zist:
-        if piece and piece.x == destX and piece.y == destY:
-            global i
-            i = zist.index(piece)
-            return True
-        else:
-            pass
+def checkinKilled(zist, zist_img):
+    Selected.topleft = PositionZ
+    for foe in zist:
+        if foe and foe.topleft == Selected.topleft:
+            i = zist.index(foe)
+            zist[i] = None
+            zist_img[i] = None
 
-def checkinWay(zing):
+def showMoves():
     for move in moves:
-        if (move[0] == mV[0] or move == mV[0] + SQUARE or move == mV[0] - SQUARE) and (move[1] == mV[1] or move[1] == mV[1] +SQUARE or move[1] == mV[1] -SQUARE):
-            return True
-        else:
-            pass
+        pygame.draw.circle(screen, (100,100,100), (move[0]+30, move[1]+30), 10)
 
 # How the rooks move:
-def rookMoves():
-    for pos in xies:
-        mV, mV0 = [originX, pos], [originY, pos]
-        if all(0 <= it <= 600 for it in mV and mV0):
-            moves.append(mV)
-            mV = mV0
-            moves.append(mV)
-    for move in moves:
-        if move == PositionZ:
-            return True
-        else:
-            pass
+def rookMoves(zist, enemy_zist):
+    for pos in range(75, 600, 75):
+        for factor1 in ss:
+            global mV
+            global way
+            mV = pygame.math.Vector2((originX + pos*factor1), (originY))
+            way = pygame.math.Vector2((pos*factor1), 0)
+            way = way.normalize()
+            if all(0 <= it <= 600 for it in mV) and (checkinEnemy(enemy_zist) or not checkinCollide(zist)):
+                moves.append(mV)
+            mV = pygame.math.Vector2((originX), (originY + pos*factor1))
+            way = pygame.math.Vector2(0, (pos*factor1))
+            way = way.normalize()
+            if all(0 <= it <= 600 for it in mV) and (checkinEnemy(enemy_zist) or not checkinCollide(zist)):
+                moves.append(mV)
+    bad_way.clear()
 
 # How the knights move:
-def knightMoves():
+def knightMoves(zist):
+    global mV
     for factor1 in ss:
         for factor2 in ss:
             mV = pygame.math.Vector2((originX + SQUARE*factor1*factor2), (originY + SQUARE*2*factor1))
-            if all(0 <= it <= BOARD for it in mV):
+            if all(0 <= it <= BOARD for it in mV)and not any(piece and piece.topleft == mV for piece in zist):
                 moves.append(mV)
     for factor1 in ss:
         for factor2 in ss:
             mV = pygame.math.Vector2((originX + SQUARE*2*factor1*factor2), (originY + SQUARE*factor1))
-            if all(0 <= it <= 600 for it in mV): moves.append(mV)
-    for move in moves:
-        if move == PositionZ:
-            return True
-        else:
-            pass
-
+            if all(0 <= it <= 600 for it in mV)and not any(piece and piece.topleft == mV for piece in zist):
+                moves.append(mV)
+    bad_way.clear()
 # How the bishops move:
 def bishopMoves(zist, enemy_zist):
-    pos = 0
-    for hellothere in range(7):
-        pos += SQUARE
+    for pos in range(75, 600, 75):
         for factor1 in ss:
             for factor2 in ss:
                 global mV
@@ -189,13 +184,59 @@ def bishopMoves(zist, enemy_zist):
                 way = way.normalize()
                 if all(0 <= it <= 600 for it in mV) and (checkinEnemy(enemy_zist) or not checkinCollide(zist)):
                     moves.append(mV)
-                    print(mV)
     bad_way.clear()
-    for move in moves:
-        if move == PositionZ:
-            return True
-        else:
-            pass
+
+# How the king moves
+def kingMoves(zist):
+    global mV
+    for factor1 in ss:
+        for factor2 in ss:
+            mV = [originX + SQUARE*factor1*factor2, originY + SQUARE*factor1]
+            if all(0 <= it <= 600 for it in mV) and not any(piece and list(piece.topleft) == mV for piece in zist):
+                moves.append(mV)
+        mV = [originX + SQUARE*factor1, originY]
+        if all(0 <= it <= 600 for it in mV) and not any(piece and list(piece.topleft) == mV for piece in zist):
+            moves.append(mV)
+        mV = [originX, originY + SQUARE*factor1]
+        if all(0 <= it <= 600 for it in mV) and not any(piece and list(piece.topleft) == mV for piece in zist):
+            moves.append(mV)
+    bad_way.clear()
+
+# How the queen moves:
+def queenMoves(zist, enemy_zist):
+    if bishopMoves(zist, enemy_zist) or rookMoves(zist, enemy_zist):
+        return True
+
+# How the pawns move:
+def whitepawnMoves():
+    global mV
+    if is_white_pawn:
+        mV = [originX, originY - SQUARE]
+        if not any(piece and list(piece.topleft) == mV for piece in allpieces):
+            moves.append(mV)
+            mV = [originX, originY - SQUARE*2]
+            if destY == A7 and not any(piece and list(piece.topleft) == mV for piece in allpieces):
+                moves.append(mV)
+        for factor in ss:
+            mV = [originX - SQUARE*factor, originY - SQUARE]
+            if any(piece and list(piece.topleft) == mV for piece in p_rectB):
+                moves.append(mV)
+    bad_way.clear()
+
+def blackpawnMoves():
+    global mV
+    if is_black_pawn:
+        mV = [originX, originY + SQUARE]
+        if not any(piece and list(piece.topleft) == mV for piece in allpieces):
+            moves.append(mV)
+            mV = [originX, originY + SQUARE*2]
+            if destY == A2 and not any(piece and list(piece.topleft) == mV for piece in allpieces):
+                moves.append(mV)
+        for factor in ss:
+            mV = [originX + SQUARE*factor, originY + SQUARE]
+            if any(piece and list(piece.topleft) == mV for piece in p_rectA):
+                moves.append(mV)
+    bad_way.clear()
 
 # Makes next section more readable:
 def is_rook(zing, zist):
@@ -224,83 +265,30 @@ def is_black_pawn(zing, zist):
 def checkinWho(zing, zist, enemy_zist):
     
     if is_rook(zing, zist):
-        if rookMoves() and not checkinWay(zing):
-            pass
-        else:
-            print("that's not how rooks move")
-            zing.x = originX
-            zing.y = originY
-            return True
+        rookMoves(zist, enemy_zist)
 
     elif is_knight(zing, zist):
-        if knightMoves():
-            pass
-        else:
-            print("that's not how knights move")
-            zing.x = originX
-            zing.y = originY
-            return True
+        knightMoves(zist)
 
     elif is_bishop(zing, zist):
-        if bishopMoves(zist, enemy_zist):
-            print("all good")
-            pass
-        else:
-            print("that's not how bishops move")
-            zing.x = originX
-            zing.y = originY
-            return True
+        bishopMoves(zist, enemy_zist)
 
     elif is_king(zing, zist):
-        if (destX == originX or destX == originX + SQUARE or destX == originX - SQUARE) and (destY == originY or destY == originY +SQUARE or destY == originY -SQUARE):
-            pass
-        else:
-            print("that's not how the king moves")
-            zing.x = originX
-            zing.y = originY
-            return True
+        kingMoves(zist)
 
     elif is_queen(zing, zist):
-        biV = pygame.math.Vector2(abs(destX - originX), abs(destY - originY))
-        biV0 = pygame.math.Vector2(SQUARE, SQUARE)
-        if (biV.normalize() == biV0.normalize() or originX == destX or originY == destY) and not checkinWay(zing):
-            pass
-        else:
-            print("that's not how the queen moves")
-            zing.x = originX
-            zing.y = originY
-            return True
+        queenMoves(zist, enemy_zist)
 
     elif is_white_pawn(zing, zist):
-        if destY == originY - SQUARE and destX == originX and not checkinKilled(p_rectB):
-            pass
-        elif originY == A7 and destY == originY - SQUARE*2 and destX == originX and not(checkinWay(zing) or checkinKilled(p_rectB)):
-            pass
-        elif destY == originY - SQUARE and (destX == originX -SQUARE or destX == originX +SQUARE) and checkinKilled(p_rectB):
-            pass
-        else:
-            print("that's not how pawns move")
-            zing.x = originX
-            zing.y = originY
-            return True
+        whitepawnMoves()
         
     elif is_black_pawn(zing, zist):
-        if destY == originY + SQUARE and destX == originX and not checkinKilled(p_rectA):
-            pass
-        elif originY == A2 and destY == originY + SQUARE*2 and destX == originX and not(checkinWay(zing) or checkinKilled(p_rectA)):
-            pass
-        elif destY == originY + SQUARE and (destX == originX - SQUARE or destX == originX + SQUARE) and checkinKilled(p_rectA):
-            pass
-        else:
-            print("that's not how pawns move")
-            zing.x = originX
-            zing.y = originY
-            return True
+        blackpawnMoves()
 
 class Pieces:
     # def __init__(self):
-    #     self.name = AllPieces[allpieces.index(piece)]
-    def moving(rect_pieces, enemy_pieces_rect, enemy_pieces_img):
+    #     self.unmoved = bool
+    def moving(rect_pieces, enemy_pieces_rect):
         for sltd in rect_pieces:
             global piece_touched
             if sltd and event.type == pygame.MOUSEBUTTONDOWN and sltd.collidepoint(pygame.mouse.get_pos()) and piece_touched is False:
@@ -308,27 +296,25 @@ class Pieces:
                 global originX
                 global originY
                 global PositionA
+                global PositionZ
                 Selected = sltd
                 originX = Selected.x
                 originY = Selected.y
-                PositionA = Selected.center
+                PositionA = Selected.topleft
                 piece_touched = True
+                moves.clear()
             if piece_touched:
                 Selected.center = pygame.mouse.get_pos()
-                if event.type == pygame.MOUSEBUTTONUP:
+                if event.type == pygame.MOUSEBUTTONUP or moves:
                     checkinXY(Selected)
-                    global PositionZ
                     PositionZ = [destX, destY]
-                    if checkinWho(Selected, rect_pieces, enemy_pieces_rect):
-                        piece_touched = False
-                        return False
-                    else:
-                        if checkinKilled(enemy_pieces_rect):
-                            enemy_pieces_rect[i] = None
-                            enemy_pieces_img[i] = None
-                        Selected.x = destX
-                        Selected.y = destY
-                        return True
+                    checkinWho(Selected, rect_pieces, enemy_pieces_rect)
+                    for move in moves:
+                        if move == PositionZ and not PositionA == PositionZ:
+                            return True
+                        else:
+                            piece_touched = False
+                            Selected.topleft = PositionA
 
 while True:
     for event in pygame.event.get():
@@ -342,15 +328,27 @@ while True:
     setting_board(p_rectB, piecesB)
 
     if WhiteTurn:
-        if Pieces.moving(p_rectA, p_rectB, piecesB):
+        if moves:
+            showMoves()
+            if event.type == pygame.MOUSEBUTTONUP:
+                piece_touched = True
+        if Pieces.moving(p_rectA, p_rectB):
+            checkinKilled(p_rectB, piecesB)
             WhiteTurn = False
             piece_touched = False
+            moves.clear()
             print("Black's Turn")
 
     else:
-        if Pieces.moving(p_rectB, p_rectA, piecesA):
+        if moves:
+            showMoves()
+            if event.type == pygame.MOUSEBUTTONUP:
+                piece_touched = True
+        if Pieces.moving(p_rectB, p_rectA):
+            checkinKilled(p_rectA, piecesA)
             WhiteTurn = True
             piece_touched = False
+            moves.clear()
             print("White's Turn")
 
     pygame.display.update()
