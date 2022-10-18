@@ -35,6 +35,8 @@ ss = [1, -1]
 
 piece_touched = False
 WhiteTurn = True
+black_in_check = False
+white_in_check = False
 
 chess_surf = pygame.image.load('graphics/chess.png').convert_alpha()
 kingW = pygame.image.load('graphics/kingW.png').convert_alpha()
@@ -135,15 +137,12 @@ def executeOrder(zist, enemy_zist):
             rect = enemy_zist[i]
             enemy_zist[i] = None
             killed = True
-            print(f"killed {i}")
     for foe in enemy_zist:
         if foe and kingSafety(foe, enemy_zist, zist):
             if killed:
                 enemy_zist[i] = rect
                 print("cant kill in check")
             return True
-        else:
-            pass
 
 # Show available moves:
 def showMoves():
@@ -157,14 +156,12 @@ def kingSafety(zing, enemy_zist, zist):
     originX = zing.x
     originY = zing.y
     checkinWho(zing, enemy_zist, zist)
-    originX = Selected.x
-    originY = Selected.y
-    showMoves()
-    u_moves = []
-    for move in moves:
-        if move not in u_moves:
-            u_moves.append(move)
-            print(list(move))
+    # showMoves()
+    # u_moves = []
+    # for move in moves:
+    #     if move not in u_moves:
+    #         u_moves.append(move)
+    #         print(list(move))
     if any(move == list(zist[3].topleft) for move in moves):
         print("king in check")
         moves.clear()
@@ -334,6 +331,7 @@ class Pieces:
                     for move in moves:
                         if move == PositionZ and not PositionA == PositionZ:
                             Selected.topleft = PositionZ
+                            moves.clear()
                             return True
                     piece_touched = False
                     Selected.topleft = PositionA
@@ -354,13 +352,22 @@ while True:
     if moves:
         showMoves()
 
+    if black_in_check:
+        pygame.draw.rect(screen, (255,0,0), p_rectB[3], 4)
+
+    if white_in_check:
+        pygame.draw.rect(screen, (255,0,0), p_rectA[3], 4)
+
     if WhiteTurn:
         if Pieces.moving(p_rectA, p_rectB):
             if not executeOrder(p_rectA, p_rectB):
+                white_in_check = False
                 WhiteTurn = False
                 piece_touched = False
                 moves.clear()
                 print("Black's Turn")
+                if any(foe and kingSafety(foe, p_rectA, p_rectB) for foe in p_rectA):
+                    black_in_check = True
             else:
                 print("here")
                 piece_touched = False
@@ -369,10 +376,13 @@ while True:
     else:
         if Pieces.moving(p_rectB, p_rectA):
             if not executeOrder(p_rectB, p_rectA):
+                black_in_check = False
                 WhiteTurn = True
                 piece_touched = False
                 moves.clear()
                 print("White's Turn")
+                if any(foe and kingSafety(foe, p_rectB, p_rectA) for foe in p_rectB):
+                    white_in_check = True
             else:
                 print("here")
                 piece_touched = False
